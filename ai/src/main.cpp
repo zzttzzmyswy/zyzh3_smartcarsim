@@ -1,5 +1,6 @@
 #include <string>
 #include <cstring>
+#include <iostream>
 #include "GL/glut.h"
 #include "scs.h"
 
@@ -22,28 +23,83 @@ void Display() {
   glColor3d(0.0, 1.0, 0.0);
   glRectd(-0.1, -0.1, 0.1, 0.1);
 }
-
+//TODO:此处修改核心控制算法
 void AI_Camera() {
-  int i = GRAPH_HEIGHT / 2, j;
-  int left, right, middle, dir, voltage, Threshold = 100;
-  double speed;
+    int i = GRAPH_HEIGHT / 2, j;
+    int left, right, middle, dir, voltage, Threshold = 50;
+    double speed;
+    int middle1, middle2, middle3;
+    int dir1, dir2, dir3;
+    const double pidp = 2;
+    const double pidd = 0.9;
+    static int dirout = 0, dirout_old = 0;
+    static double err, err_last = 0;
 
-  sGetGraph(graph);
+    /* 获取当前帧的图像 */
+    sGetGraph(graph);
 
-  for (j = GRAPH_WIDTH / 2; j > 0; j--)
-    if (graph[i][j] < Threshold) break;
-  left = j;
-  for (j = GRAPH_WIDTH / 2; j < GRAPH_WIDTH - 1; j++)
-    if (graph[i][j] < Threshold) break;
-  right = j;
-  middle = (left + right) / 2;
+    /* 获取左右两个方向的边线检测 */
+    for (j = GRAPH_WIDTH / 2; j > 0; j--)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.45))][j] < Threshold) break;
+    left = j;
+    for (j = GRAPH_WIDTH / 2; j < GRAPH_WIDTH - 1; j++)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.45))][j] < Threshold) break;
+    right = j;
+    middle1 = (left + right) / 2;
+    /* 获取中线向左右两个方向的边线检测 */
+    if(abs(dirout_old)<0)
+    {
+        for (j = GRAPH_WIDTH / 2 - 10 ; j > 0; j--)
+            if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
+        left = j;
+        for (j = GRAPH_WIDTH / 2 + 10; j < GRAPH_WIDTH - 1; j++)
+            if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
+        right = j;
+        middle2 = (left + right) / 2;
+    }
+    else
+    {
+        for (j = GRAPH_WIDTH / 2 + err_last; j > 0; j--)
+            if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
+        left = j;
+        for (j = GRAPH_WIDTH / 2 + err_last; j < GRAPH_WIDTH - 1; j++)
+            if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
+        right = j;
+        middle2 = (left + right) / 2;
+    }
+    /* 获取左右两个方向的边线检测 */
+    for (j = GRAPH_WIDTH / 2; j > 0; j--)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.7))][j] < Threshold) break;
+    left = j;
+    for (j = GRAPH_WIDTH / 2; j < GRAPH_WIDTH - 1; j++)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.7))][j] < Threshold) break;
+    right = j;
+    middle3 = (left + right) / 2;
 
-  dir = (middle - GRAPH_WIDTH / 2) * 300 / GRAPH_WIDTH;
-  sSetServoDir(dir);
+    /* 获得距离中线偏差 */
+    dir1 = (middle1 - GRAPH_WIDTH / 2);
+    dir2 = (middle2 - GRAPH_WIDTH / 2);
+    dir3 = (middle3 - GRAPH_WIDTH / 2);
 
-  speed = sGetSpeed();
-  voltage = (int)((1.5 - speed) * 10.0 + 5.0);
-  sSetMotor(voltage);
+    err = (dir1*1 + dir2*8 + dir3*1)/10;
+    err = dir2;
+    std::cout << err << std::endl;
+    /* PD控制器 */
+    dirout = err * pidp + (err - err_last) * pidd;
+    err_last = err;
+    dirout = dirout * 0.9 + dirout_old * 0.1;
+    dirout_old = dirout;
+
+    /* 对输出进行范围限制 */
+    dirout = dirout > 100 ? 100 : (dirout < -100 ? -100 : dirout);
+    /* 设置舵机角度，正负100度 */
+    sSetServoDir(dirout);
+
+    /* 获取平均速度，且单位为角度/s */
+    speed = sGetSpeed();
+    voltage = (int)((1.5 - speed) * 10.0 + 5.0);
+    /* 单位为与电压正相关的值 */
+    sSetMotor(voltage);
 }
 
 void AI_Electromagnetic() {
@@ -61,7 +117,7 @@ void AI_Electromagnetic() {
   sSetServoDir(dir);
 
   speed = sGetSpeed();
-  voltage = (int)((1.0 - speed) * 10.0 + 5.0);
+  voltage = (int)((1.5 - speed) * 10.0 + 5.0);
   sSetMotor(voltage);
 }
 
@@ -126,7 +182,8 @@ int main(int argc, char *argv[]) {
       sSetAiFunc(AI_Electromagnetic);
       break;
   }
-  sSetTrack((std::string("../track/") + std::string(track)).c_str());
+  //TODO:修改路径
+  sSetTrack((std::string("G:\\专业综合实践-课设资料-2019级\\kf\\ss\\专业综合实践-课设资料-2019级\\项目3资料\\smartcarsim\\build\\VS2010\\Release\\track\\") + std::string(track)).c_str());
   sRegister("I've read the license. And I accept it.");
   scsMainLoop(&argc, argv);
 
