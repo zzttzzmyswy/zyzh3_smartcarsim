@@ -23,7 +23,7 @@ void Display() {
   glColor3d(0.0, 1.0, 0.0);
   glRectd(-0.1, -0.1, 0.1, 0.1);
 }
-//TODO:此处修改核心控制算法
+//TODO:此处修改核心控制算法 代码编写调试者：张泽韬 ，其余成员：张之焱、戴逸凡
 void AI_Camera() {
     int i = GRAPH_HEIGHT / 2, j;
     int left, right, middle, dir, voltage, Threshold = 10;
