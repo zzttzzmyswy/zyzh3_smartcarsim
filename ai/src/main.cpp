@@ -26,67 +26,59 @@ void Display() {
 //TODO:此处修改核心控制算法
 void AI_Camera() {
     int i = GRAPH_HEIGHT / 2, j;
-    int left, right, middle, dir, voltage, Threshold = 50;
-    double speed;
+    int left, right, middle, dir, voltage, Threshold = 10;
+    double speed;/*速度*/
     int middle1, middle2, middle3;
-    int dir1, dir2, dir3;
-    const double pidp = 2;
-    const double pidd = 0.9;
-    static int dirout = 0, dirout_old = 0;
-    static double err, err_last = 0;
+    static int dir1, dir2, dir3;/*三条线检测到的偏差*/
+    const double pidp = 2;/*PID的P参数*/
+    const double pidd = 0.9;/*PID的D参数*/
+    static int dirout = 0, dirout_old = 0;/*输出记录*/
+    static double err, err_last = 0;/*误差记录*/
+    static int countL = 0; /*直行道计数*/
+    static double mu = 1.5; /*目标速度*/
+    static double speed_old, speed_flag = 0, speed_flag1 = 0; /*速度标记*/
+    int needadd = 0;/*加速标记*/
 
     /* 获取当前帧的图像 */
     sGetGraph(graph);
 
-    /* 获取左右两个方向的边线检测 */
-    for (j = GRAPH_WIDTH / 2; j > 0; j--)
-        if (graph[(int)((double)GRAPH_HEIGHT * (0.45))][j] < Threshold) break;
+    /* 获取0.5高度左右两个方向的边线检测 */
+    /* 将上次误差作为偏差计算基准的因素之一，从而避免转弯边线偏移过大导致边线判断错误 */
+    for (j = GRAPH_WIDTH / 2 + err_last; j > 0; j--)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
     left = j;
-    for (j = GRAPH_WIDTH / 2; j < GRAPH_WIDTH - 1; j++)
-        if (graph[(int)((double)GRAPH_HEIGHT * (0.45))][j] < Threshold) break;
+    for (j = GRAPH_WIDTH / 2 + err_last; j < GRAPH_WIDTH - 1; j++)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
     right = j;
     middle1 = (left + right) / 2;
-    /* 获取中线向左右两个方向的边线检测 */
-    if(abs(dirout_old)<0)
-    {
-        for (j = GRAPH_WIDTH / 2 - 10 ; j > 0; j--)
-            if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
-        left = j;
-        for (j = GRAPH_WIDTH / 2 + 10; j < GRAPH_WIDTH - 1; j++)
-            if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
-        right = j;
-        middle2 = (left + right) / 2;
-    }
-    else
-    {
-        for (j = GRAPH_WIDTH / 2 + err_last; j > 0; j--)
-            if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
-        left = j;
-        for (j = GRAPH_WIDTH / 2 + err_last; j < GRAPH_WIDTH - 1; j++)
-            if (graph[(int)((double)GRAPH_HEIGHT * (0.5))][j] < Threshold) break;
-        right = j;
-        middle2 = (left + right) / 2;
-    }
-    /* 获取左右两个方向的边线检测 */
-    for (j = GRAPH_WIDTH / 2; j > 0; j--)
-        if (graph[(int)((double)GRAPH_HEIGHT * (0.7))][j] < Threshold) break;
+    dir1 = (middle1 - GRAPH_WIDTH / 2) + 1;
+    /* 获取0.55高度中线向左右两个方向的边线检测 */
+    /* 将上次误差作为偏差计算基准的因素之一，从而避免转弯边线偏移过大导致边线判断错误 */
+    for (j = GRAPH_WIDTH / 2 + err_last; j > 0; j--)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.55))][j] < Threshold) break;
     left = j;
-    for (j = GRAPH_WIDTH / 2; j < GRAPH_WIDTH - 1; j++)
-        if (graph[(int)((double)GRAPH_HEIGHT * (0.7))][j] < Threshold) break;
+    for (j = GRAPH_WIDTH / 2 + err_last; j < GRAPH_WIDTH - 1; j++)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.55))][j] < Threshold) break;
+    right = j;
+    middle2 = (left + right) / 2;
+    dir2 = (middle2 - GRAPH_WIDTH / 2) + 1;
+    /* 获取0.6高度左右两个方向的边线检测 */
+    /* 将上次误差作为偏差计算基准的因素之一，从而避免转弯边线偏移过大导致边线判断错误 */
+    for (j = GRAPH_WIDTH / 2 + err_last; j > 0; j--)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.6))][j] < Threshold) break;
+    left = j;
+    for (j = GRAPH_WIDTH / 2 + err_last; j < GRAPH_WIDTH - 1; j++)
+        if (graph[(int)((double)GRAPH_HEIGHT * (0.6))][j] < Threshold) break;
     right = j;
     middle3 = (left + right) / 2;
+    dir3 = (middle3 - GRAPH_WIDTH / 2) + 1;
+    /*计算误差均数*/
+    err = (dir1 * 4 + dir2 * 4 + dir3 * 4) / 12;
 
-    /* 获得距离中线偏差 */
-    dir1 = (middle1 - GRAPH_WIDTH / 2);
-    dir2 = (middle2 - GRAPH_WIDTH / 2);
-    dir3 = (middle3 - GRAPH_WIDTH / 2);
-
-    err = (dir1*1 + dir2*8 + dir3*1)/10;
-    err = dir2;
-    std::cout << err << std::endl;
     /* PD控制器 */
     dirout = err * pidp + (err - err_last) * pidd;
     err_last = err;
+    /*对输出进行滤波*/
     dirout = dirout * 0.9 + dirout_old * 0.1;
     dirout_old = dirout;
 
@@ -97,9 +89,64 @@ void AI_Camera() {
 
     /* 获取平均速度，且单位为角度/s */
     speed = sGetSpeed();
-    voltage = (int)((1.5 - speed) * 10.0 + 5.0);
+    voltage = (int)((mu - speed) * 10.0 + 5.0);
+    /* 是否上坡 */
+    if (speed < 1.1)
+        needadd = 2;
+    else
+        needadd = 0;
+    /* 检测直道 */
+    if ((abs(dirout) < 7) || ((abs(dirout) < 12) && speed_flag == 1))
+    {
+        countL += 1;
+        if (countL >= 20)
+        {
+            needadd = 1;
+        }
+        if ((speed_flag == 1) && countL >= 10)
+            needadd = 1;
+    }
+    else
+    {
+        countL = 0;
+        needadd = 0;
+    }
+    /* 当检测到从坡上下来之后，切换速度标记 */
+    if ((speed >= 2.7) && (speed_flag1 == 0))
+    {
+        speed_flag = (speed_flag == 0) ? 1 : 0;
+        speed_flag1 = 1;
+        //std::cout << "speed_flag" << std::endl;
+    }
+    else if (speed < 1.3)
+    {
+        speed_flag1 = 0;
+    }
+    /* 根据加速标记进行对应的加速方式 */
+    if (needadd == 1)
+    {
+        mu = 5;
+        voltage += 5;
+    }
+    else if (needadd == 2)
+    {
+        mu = 3;
+        voltage += 30;
+    }
+    else
+    {
+        if (speed_flag == 1)
+            mu = 1.8;
+        else
+            mu = 1.5;
+    }
+
+    speed_old = speed;
+
     /* 单位为与电压正相关的值 */
     sSetMotor(voltage);
+    //std::cout << diravg << " " << dir1 << " " << dir2 << " " << dir3 << " " << err << " " << dirout << std::endl;
+    //std::cout << speed << " " << speed_flag << std::endl;
 }
 
 void AI_Electromagnetic() {
@@ -170,6 +217,7 @@ int main(int argc, char *argv[]) {
       sSetCar(camera);
       sSetAiFunc(AI_Camera);
       sEnableCustomWindow();
+      sEnableRoute();
       sSetDisplayFunc(Display);
       break;
     case 1:
