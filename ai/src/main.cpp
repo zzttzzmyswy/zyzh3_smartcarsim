@@ -96,7 +96,7 @@ void AI_Camera() {
     else
         needadd = 0;
     /* ºÏ≤‚÷±µ¿ */
-    if ((abs(dirout) < 7) || ((abs(dirout) < 12) && speed_flag == 1))
+    if ((abs(dirout) < 5) || ((abs(dirout) < 12) && speed_flag == 1))
     {
         countL += 1;
         if (countL >= 20)
@@ -131,7 +131,7 @@ void AI_Camera() {
     else if (needadd == 2)
     {
         mu = 3;
-        voltage += 30;
+        voltage += 20;
     }
     else
     {
