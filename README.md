@@ -1,3 +1,9 @@
+# 说明
+
+本项目为本人专业综合实践课程实验三项目，该仓库仅用于存档与本人分享使用，如需参考，请访问原作者仓库
+
+下面是原作者的README
+
 # SCS 智能车仿真平台
 
 搬运自[SourceForge项目](https://sourceforge.net/p/smartcarsim/)，
